@@ -3,19 +3,17 @@ import os
 import logging
 import pandas as pd
 import config
+import error_handler  # Import the error handler
 
 from utils import load_soup, write_csv, append_to_csv
 from scrapers import CommissionScraper
 from agenda_scraper import AgendaScraper
 from questions_scraper import QuestionsScraper
 from speeches_scraper import SpeechesScraper
-from clean_content import clean_content_csv  # Import the new cleaning function
+from clean_content import clean_content_csv  # Import the cleaning function
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s"
-)
+# Initialize error handling
+error_handler.init()
 
 def run_commission_workflow(commission_config):
     """Run the full workflow for a single commission."""
@@ -30,7 +28,7 @@ def run_commission_workflow(commission_config):
     meetings_data = run_initial_scraping(commission_config, meetings_csv)
     if not meetings_data:
         logging.error("Failed to get initial meeting data for %s. Aborting workflow.", commission_name)
-        return
+        return False
     
     # Step 2: Scrape detailed agenda information for each meeting
     run_agenda_scraper(commission_name, meetings_csv)
@@ -141,11 +139,32 @@ def run_speeches_scraper(commission_name, content_csv):
 
 def main():
     logging.info("Starting modular scraping workflow for all configured commissions.")
+    logging.info(f"Data will be saved to: {config.DATA_DIR}")
+    
+    # Create data directory if it doesn't exist
+    os.makedirs(config.DATA_DIR, exist_ok=True)
+    
+    success_count = 0
+    failure_count = 0
     
     for commission_id, commission_config in config.COMMISSIONS.items():
-        run_commission_workflow(commission_config)
+        try:
+            logging.info(f"Processing commission: {commission_id}")
+            result = run_commission_workflow(commission_config)
+            if result:
+                success_count += 1
+            else:
+                failure_count += 1
+        except Exception as e:
+            logging.error(f"Error processing commission {commission_id}: {e}")
+            failure_count += 1
     
-    logging.info("All commission workflows completed successfully.")
+    logging.info("Scraping workflow completed.")
+    logging.info(f"Commissions processed successfully: {success_count}")
+    logging.info(f"Commissions with errors: {failure_count}")
+    
+    if failure_count > 0:
+        logging.warning("Some commissions had errors. Check the logs for details.")
 
 
 if __name__ == '__main__':
