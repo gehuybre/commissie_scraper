@@ -15,7 +15,8 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Fetch all history for all branches and tags
+          fetch-depth: 0  # Fetch all history
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -37,27 +38,26 @@ jobs:
           mkdir -p data
           python src/main.py
       
-      - name: Configure Git
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-      
       - name: Commit and push changes
         run: |
-          # Pull latest changes from remote first (with rebase)
-          git pull --rebase origin ${GITHUB_REF##*/}
+          # Configure Git
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           
-          # Add any new files that were created
+          # Pull the latest changes from the repository
+          git pull origin "${GITHUB_REF#refs/heads/}" --rebase
+          
+          # Add data directory to Git
           git add data/
           
-          # Check if there are any changes to commit
+          # Check if there are changes to commit
           if git diff --staged --quiet; then
             echo "No changes to commit"
             exit 0
           fi
           
-          # Commit with date in message for tracking
+          # Commit changes
           git commit -m "Update parliament data: $(date +'%Y-%m-%d')"
           
-          # Push directly
-          git push origin ${GITHUB_REF##*/}
+          # Push changes directly using the built-in token
+          git push "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:"${GITHUB_REF#refs/heads/}"
