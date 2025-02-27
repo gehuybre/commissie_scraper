@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history for all branches and tags
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -40,8 +42,11 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
       
-      - name: Commit changes
+      - name: Commit and push changes
         run: |
+          # Pull latest changes from remote first (with rebase)
+          git pull --rebase origin ${GITHUB_REF##*/}
+          
           # Add any new files that were created
           git add data/
           
@@ -53,9 +58,6 @@ jobs:
           
           # Commit with date in message for tracking
           git commit -m "Update parliament data: $(date +'%Y-%m-%d')"
-      
-      - name: Push changes
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.ref }}
+          
+          # Push directly
+          git push origin ${GITHUB_REF##*/}
