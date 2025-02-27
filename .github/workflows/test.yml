@@ -1,0 +1,33 @@
+name: Test Create File
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-file:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch full history
+
+      - name: Create test file
+        run: |
+          echo "This is a test file created on $(date)" > test_file.txt
+          cat test_file.txt
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit and push changes
+        run: |
+          git add test_file.txt
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Test: add test_file.txt"
+            git push
+          fi
