@@ -5,12 +5,10 @@ on:
     # Run on Mondays and Fridays at 5:00 AM UTC
     - cron: '0 5 * * 1,5'
   workflow_dispatch:
-    # Allow manual triggering
 
 jobs:
   scrape-parliament-data:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
@@ -29,7 +27,7 @@ jobs:
           python -m pip install --upgrade pip
           # Install numpy first to ensure compatibility
           pip install numpy==1.23.5
-          # Then install other dependencies
+          # Install dependencies from requirements.txt if present, else install defaults
           if [ -f requirements.txt ]; then 
             pip install -r requirements.txt
           else 
@@ -48,21 +46,20 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Ensure the local branch matches the latest remote state to avoid commit errors
-          git fetch origin "${GITHUB_REF#refs/heads/}"
-          git reset --hard origin/"${GITHUB_REF#refs/heads/}"
+          # Rebase local branch with latest remote changes to ensure it's in sync
+          git pull origin master --rebase
           
-          # Add the data directory to Git
+          # Add changes from the data directory
           git add data/
           
-          # Check if there are changes to commit
-          if git diff --cached --quiet; then
+          # Check if there are any changes to commit
+          if git diff --staged --quiet; then
             echo "No changes to commit"
             exit 0
           fi
           
-          # Commit changes
+          # Commit the changes with a timestamp
           git commit -m "Update parliament data: $(date +'%Y-%m-%d')"
           
-          # Push changes directly using the built-in token
+          # Push the changes back to the repository
           git push "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:"${GITHUB_REF#refs/heads/}"
