@@ -30,7 +30,11 @@ jobs:
           # Install numpy first to ensure compatibility
           pip install numpy==1.23.5
           # Then install other dependencies
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; else pip install pandas==1.5.3 beautifulsoup4 requests; fi
+          if [ -f requirements.txt ]; then 
+            pip install -r requirements.txt
+          else 
+            pip install pandas==1.5.3 beautifulsoup4 requests
+          fi
       
       - name: Run scraper
         run: |
@@ -41,17 +45,18 @@ jobs:
       - name: Commit and push changes
         run: |
           # Configure Git
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Pull the latest changes from the repository
-          git pull origin "${GITHUB_REF#refs/heads/}" --rebase
+          # Ensure the local branch matches the latest remote state to avoid commit errors
+          git fetch origin "${GITHUB_REF#refs/heads/}"
+          git reset --hard origin/"${GITHUB_REF#refs/heads/}"
           
-          # Add data directory to Git
+          # Add the data directory to Git
           git add data/
           
           # Check if there are changes to commit
-          if git diff --staged --quiet; then
+          if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
           fi
